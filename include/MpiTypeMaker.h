@@ -83,23 +83,23 @@ namespace MpiTypeMaker
         };
 
         template <class... Ts>
-        auto GetCustomTypeInfo(const Ts &...all)
+        auto GetStructInfo(const Ts &...all)
         {
 
             const int membersCount = sizeof...(Ts) - 1;
             CustomTypeInfo typeInfo{};
             typeInfo.resize(membersCount);
 
-            processMember(typeInfo, 0, all...);
+            processStructMember(typeInfo, 0, all...);
 
             return typeInfo;
         }
 
         // A recursive method to loop over all members
         template <class Tobj, class Tm, class... Ts>
-        constexpr void processMember(CustomTypeInfo &typeInfo,
-                                     int counter,
-                                     const Tobj &obj, const Tm &member, const Ts &...rest)
+        constexpr void processStructMember(CustomTypeInfo &typeInfo,
+                                           int counter,
+                                           const Tobj &obj, const Tm &member, const Ts &...rest)
         {
 
             if constexpr (is_std_array<Tm>::value)
@@ -117,12 +117,46 @@ namespace MpiTypeMaker
             if constexpr (sizeof...(rest) > 0)
             {
                 counter++;
-                processMember(typeInfo, counter, obj, rest...);
+                processStructMember(typeInfo, counter, obj, rest...);
             }
         }
+
+        template <class T>
+        auto GetTupleInfo(T tup)
+        {
+
+            const int membersCount = std::tuple_size<T>();
+            CustomTypeInfo typeInfo{};
+            typeInfo.resize(membersCount);
+
+            processTupleMember<T, 0>(typeInfo, tup);
+
+            return typeInfo;
+        }
+        template <class Ttup, int counter>
+        auto processTupleMember(CustomTypeInfo &typeInfo, Ttup &obj)
+        {
+            auto &member = std::get<counter>(obj);
+            using Tm = std::remove_reference_t<decltype(get<counter>(obj))>;
+
+            if constexpr (is_std_array<Tm>::value)
+                typeInfo.blocklengths[counter] = member.size();
+            else if constexpr (std::is_array_v<std::remove_reference_t<Tm>>)
+                typeInfo.blocklengths[counter] = GetCArraySize(member);
+            else
+                typeInfo.blocklengths[counter] = 1;
+
+            typeInfo.displacements[counter] = MPI_Aint_diff(&member, &obj);
+
+            typeInfo.types[counter] = GetMpiType(member);
+
+            if constexpr (counter < std::tuple_size<Ttup>() - 1)
+                processTupleMember<Ttup, counter + 1>(typeInfo, obj);
+        }
+
     }
 
-    // This function is the API of this code.
+    // This function is an API of this code.
     // It returns a custom struct MPI type.
     // The first argument is an object and
     // the rests are data members of that object.
@@ -131,7 +165,7 @@ namespace MpiTypeMaker
     auto CreateCustomMpiType(const Ts &...all)
     {
 
-        auto typeInfo = GetCustomTypeInfo(all...);
+        auto typeInfo = GetStructInfo(all...);
 
         MPI_Datatype CustomType;
 
@@ -141,57 +175,14 @@ namespace MpiTypeMaker
         return CustomType;
     }
 
+    // This function is an API of this code.
+    // It returns a Tuple MPI type for the argument
+    // which is a C++ tuple.
     template <class T>
-    auto GetTupleInfo(T tup)
-    {
-
-        const int membersCount = std::tuple_size<T>();
-        CustomTypeInfo typeInfo{};
-        typeInfo.resize(membersCount);
-
-        processTupleMember<T, 0>(typeInfo, tup);
-
-        return typeInfo;
-    }
-    template <class Ttup, int counter>
-    auto processTupleMember(CustomTypeInfo &typeInfo, Ttup &obj)
-    {
-        auto& member = std::get<counter>(obj);
-        using Tm = std::tuple_element<counter, Ttup>;
-
-        if constexpr (is_std_array<Tm>::value)
-            typeInfo.blocklengths[counter] = member.size();
-        else if constexpr (std::is_array_v<std::remove_reference_t<Tm>>)
-            typeInfo.blocklengths[counter] = GetCArraySize(member);
-        else
-            typeInfo.blocklengths[counter] = 1;
-
-        typeInfo.displacements[counter] = MPI_Aint_diff(&member, &obj);
-
-        typeInfo.types[counter] = GetMpiType(member);
-
-        if constexpr (counter < std::tuple_size<Ttup>() - 1)
-            processTupleMember<Ttup, counter + 1>(typeInfo, obj);
-    }
-
-    template <class T>
-    auto CreateTupleMpiType(T& tup)
+    auto CreateTupleMpiType(T &tup)
     {
 
         auto typeInfo = GetTupleInfo(tup);
-
-        for (auto &&i : typeInfo.blocklengths)
-        {
-            std::cout<< i<<" lenths";
-        }
-std::cout<<"\n";
-        for (auto &&i : typeInfo.displacements)
-        {
-            std::cout<< i <<" d ";
-        }
-        std::cout<<"\n";
-
-        
 
         MPI_Datatype CustomType;
 

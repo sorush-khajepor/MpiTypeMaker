@@ -7,18 +7,17 @@
 using namespace std;
 using namespace MpiTypeMaker;
 
-using Particle = std::tuple<int,double,float>;
-
+using Particle = std::tuple<int,char[3],array<double,3>>;
 auto printParticle(const Particle &p)
 {
 	cout << "Index=" << get<0>(p) << "\n";
-	cout << "Name = "<<get<1>(p)<<"\n";
-	//for (auto &&c : get<1>(p))
-//		cout << c;
-//	cout << "\n";
-	cout << "Location = "<<get<2>(p);
-//	for (auto &&v : get<2>(p))
-	//	cout << v << " ";
+	cout << "Name = ";
+	for (int i=0; i<3; i++ )
+		cout << get<1>(p)[i];
+	cout << "\n";
+	cout << "Location = ";
+	for (auto &&v : get<2>(p))
+	cout << v << " ";
 	cout << "\n---\n";
 }
 
@@ -28,8 +27,8 @@ void initSampleParticles(vector<Particle> &particles, int particlesCount)
 	{
 		Particle p;
 		get<0>(p) = i;
-		get<1>(p)=i; //get<1>(p)[1]= '0'; get<1>(p)[2]= 'A'+i;;
-		get<2>(p)=i*10+0.5;
+		get<1>(p)[0]='P'; get<1>(p)[1]= '0'; get<1>(p)[2]= 'A'+i;
+		get<2>(p)[0]=i*10+0.5; get<2>(p)[1]=i*10+0.5; get<2>(p)[2]=i*10+0.5;
 		particles.push_back(p);
 	}
 }
@@ -40,7 +39,6 @@ int main()
 
 	Particle p;
 
-	//auto particleMpiType = CreateCustomMpiType(p, get<0>(p), get<1>(p), get<2>(p));
 	auto particleMpiType=CreateTupleMpiType(p);
 
 	int rank, size;
