@@ -2,6 +2,7 @@
 #include <type_traits>
 #include <array>
 #include <vector>
+#include <tuple>
 
 namespace MpiTypeMaker
 {
@@ -122,10 +123,10 @@ namespace MpiTypeMaker
     }
 
     // This function is the API of this code.
-    // It returns a custom struct MPI type. 
-    // The first argument is an object and 
+    // It returns a custom struct MPI type.
+    // The first argument is an object and
     // the rests are data members of that object.
-    // The order of members is not important. 
+    // The order of members is not important.
     template <class... Ts>
     auto CreateCustomMpiType(const Ts &...all)
     {
@@ -140,6 +141,64 @@ namespace MpiTypeMaker
         return CustomType;
     }
 
-    
+    template <class T>
+    auto GetTupleInfo(T tup)
+    {
+
+        const int membersCount = std::tuple_size<T>();
+        CustomTypeInfo typeInfo{};
+        typeInfo.resize(membersCount);
+
+        processTupleMember<T, 0>(typeInfo, tup);
+
+        return typeInfo;
+    }
+    template <class Ttup, int counter>
+    auto processTupleMember(CustomTypeInfo &typeInfo, Ttup &obj)
+    {
+        auto& member = std::get<counter>(obj);
+        using Tm = std::tuple_element<counter, Ttup>;
+
+        if constexpr (is_std_array<Tm>::value)
+            typeInfo.blocklengths[counter] = member.size();
+        else if constexpr (std::is_array_v<std::remove_reference_t<Tm>>)
+            typeInfo.blocklengths[counter] = GetCArraySize(member);
+        else
+            typeInfo.blocklengths[counter] = 1;
+
+        typeInfo.displacements[counter] = MPI_Aint_diff(&member, &obj);
+
+        typeInfo.types[counter] = GetMpiType(member);
+
+        if constexpr (counter < std::tuple_size<Ttup>() - 1)
+            processTupleMember<Ttup, counter + 1>(typeInfo, obj);
+    }
+
+    template <class T>
+    auto CreateTupleMpiType(T& tup)
+    {
+
+        auto typeInfo = GetTupleInfo(tup);
+
+        for (auto &&i : typeInfo.blocklengths)
+        {
+            std::cout<< i<<" lenths";
+        }
+std::cout<<"\n";
+        for (auto &&i : typeInfo.displacements)
+        {
+            std::cout<< i <<" d ";
+        }
+        std::cout<<"\n";
+
+        
+
+        MPI_Datatype CustomType;
+
+        MPI_Type_create_struct(typeInfo.size, typeInfo.blocklengths.data(), typeInfo.displacements.data(), typeInfo.types.data(), &CustomType);
+        MPI_Type_commit(&CustomType);
+
+        return CustomType;
+    }
 
 }
