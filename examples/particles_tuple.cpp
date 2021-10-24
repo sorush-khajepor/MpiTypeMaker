@@ -7,17 +7,17 @@
 using namespace std;
 using namespace MpiTypeMaker;
 
-using Particle = std::tuple<int,char[3],array<double,3>>;
+using Particle = std::tuple<int, char[3], array<double, 3>>;
 auto printParticle(const Particle &p)
 {
 	cout << "Index=" << get<0>(p) << "\n";
 	cout << "Name = ";
-	for (int i=0; i<3; i++ )
+	for (int i = 0; i < 3; i++)
 		cout << get<1>(p)[i];
 	cout << "\n";
 	cout << "Location = ";
 	for (auto &&v : get<2>(p))
-	cout << v << " ";
+		cout << v << " ";
 	cout << "\n---\n";
 }
 
@@ -27,8 +27,12 @@ void initSampleParticles(vector<Particle> &particles, int particlesCount)
 	{
 		Particle p;
 		get<0>(p) = i;
-		get<1>(p)[0]='P'; get<1>(p)[1]= '0'; get<1>(p)[2]= 'A'+i;
-		get<2>(p)[0]=i*10+0.5; get<2>(p)[1]=i*10+0.5; get<2>(p)[2]=i*10+0.5;
+		get<1>(p)[0] = 'P';
+		get<1>(p)[1] = '0';
+		get<1>(p)[2] = 'A' + i;
+		get<2>(p)[0] = i * 10 + 0.5;
+		get<2>(p)[1] = i * 10 + 0.5;
+		get<2>(p)[2] = i * 10 + 0.5;
 		particles.push_back(p);
 	}
 }
@@ -39,7 +43,7 @@ int main()
 
 	Particle p;
 
-	auto particleMpiType=CreateTupleMpiType(p);
+	auto particleMpiType = CreateTupleMpiType(p);
 
 	int rank, size;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
