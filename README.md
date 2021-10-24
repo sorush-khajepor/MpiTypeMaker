@@ -3,7 +3,7 @@
 
 To create an MPI type for a struct or tuple, we need to find block lenghts, displacemnts and data types of each member. This is usually hard-coded case by case and takes valuable time. Here with the aid of *C++20*, variadic functions, and type-traits, I created a simple header library to automate this task. 
 
-This is also explained in [my blog post](https://iamsorush.com/posts/mpi-custom-type/).
+This is also explained in [my blog post](https://iamsorush.com/posts/mpi-automate-custom-type/).
 
 ## Compiler
 
