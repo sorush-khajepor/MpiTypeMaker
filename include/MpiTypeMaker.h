@@ -120,18 +120,7 @@ namespace MpiTypeMaker
         }
     }
 
-    template <class T>
-    auto GetTupleInfo(T tup)
-    {
-
-        const int membersCount = std::tuple_size<T>();
-        CustomTypeInfo typeInfo{};
-        typeInfo.resize(membersCount);
-
-        processTupleMember<T, 0>(typeInfo, tup);
-
-        return typeInfo;
-    }
+    
     template <class Ttup, int counter>
     auto processTupleMember(CustomTypeInfo &typeInfo, Ttup &obj)
     {
@@ -151,6 +140,19 @@ namespace MpiTypeMaker
 
         if constexpr (counter < std::tuple_size<Ttup>() - 1)
             processTupleMember<Ttup, counter + 1>(typeInfo, obj);
+    }
+
+    template <class T>
+    auto GetTupleInfo(T tup)
+    {
+
+        const int membersCount = std::tuple_size<T>();
+        CustomTypeInfo typeInfo{};
+        typeInfo.resize(membersCount);
+
+        processTupleMember<T, 0>(typeInfo, tup);
+
+        return typeInfo;
     }
 
     // This function is an API of this code.
